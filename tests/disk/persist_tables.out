@@ -1,0 +1,50 @@
+$ -d test.db -e "CREATE TABLE 学生 (姓名 TEXT, 分数 INT);"
+已创建表 `学生`（2 列）
+$ -d test.db -e "CREATE TABLE 课程 (名称 TEXT, 学分 INT);"
+已创建表 `课程`（2 列）
+$ -d test.db -e "INSERT INTO 学生 VALUES ('张三', 90); INSERT INTO 学生 VALUES ('李四', 75);"
+插入了 1 行
+插入了 1 行
+$ -d test.db -e "INSERT INTO 课程 VALUES ('数据库', 4);"
+插入了 1 行
+$ acorn -d test.db      # stdin: .tables\n.schema\n
+学生
+课程
+CREATE TABLE 学生 (姓名 TEXT, 分数 INT);
+CREATE TABLE 课程 (名称 TEXT, 学分 INT);
+$ -d test.db -e "SELECT * FROM 学生 ORDER BY 分数 DESC;"
++------+------+
+| 姓名 | 分数 |
++------+------+
+| 张三 | 90   |
+| 李四 | 75   |
++------+------+
+(2 行)
+$ -d test.db -e "SELECT AVG(分数), COUNT(*) FROM 学生;"
++------------+-----------+
+| (avg 分数) | (count *) |
++------------+-----------+
+| 82.5       | 2         |
++------------+-----------+
+(1 行)
+$ -d test.db -e "SELECT * FROM 课程;"
++--------+------+
+| 名称   | 学分 |
++--------+------+
+| 数据库 | 4    |
++--------+------+
+(1 行)
+! pages 4  ->  file is 16384 bytes = 4 pages
+$ -d test.db -e "DROP TABLE 课程;"
+删掉了表 `课程`
+$ acorn -d test.db      # stdin: .tables\n
+学生
+$ -d test.db -e "SELECT COUNT(*) FROM 学生;"
++-----------+
+| (count *) |
++-----------+
+| 2         |
++-----------+
+(1 行)
+$ acorn -d test.db      # stdin: .tables\n
+学生

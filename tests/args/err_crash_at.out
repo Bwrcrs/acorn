@@ -1,0 +1,2 @@
+--crash-at 只认 commit 和 exit，不认 `yesterday`
+! exit 1

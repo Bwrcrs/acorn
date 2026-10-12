@@ -1,0 +1,20 @@
+$ -d test.db -e "CREATE TABLE t (id INT, v TEXT);"
+已创建表 `t`（2 列）
+$ -d test.db -e "INSERT INTO t VALUES (1,'base');"
+插入了 1 行
+! missing test.db-journal  ->  it is not there
+$ -d test.db --crash-at=commit -e "BEGIN; INSERT INTO t VALUES (2,'doomed'); COMMIT;"
+开始了事务（接下来的改动要 COMMIT 才算数）
+插入了 1 行
+! exit 1
+! exists test.db-journal  ->  it is there
+$ -d test.db -e "SELECT * FROM t ORDER BY id;"
++----+------+
+| id | v    |
++----+------+
+| 1  | base |
++----+------+
+(1 行)
+警告：上次退出时有个没做完的事务，已经照日志退回去了（1 页恢复原样，库文件截回 3 页）
+! missing test.db-journal  ->  it is not there
+! pages 3  ->  file is 12288 bytes = 3 pages

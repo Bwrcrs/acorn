@@ -1,0 +1,2 @@
+CREATE TABLE t (id INT);
+SELECT * FROM nope;

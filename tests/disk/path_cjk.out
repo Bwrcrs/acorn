@@ -1,0 +1,24 @@
+$ -d 中文库.db -e "CREATE TABLE t (x INT, v TEXT); INSERT INTO t VALUES (1,'一');"
+已创建表 `t`（2 列）
+插入了 1 行
+$ -d 中文库.db -e "SELECT * FROM t;"
++---+----+
+| x | v  |
++---+----+
+| 1 | 一 |
++---+----+
+(1 行)
+$ -d 中文库.db -e "BEGIN; INSERT INTO t VALUES (2,'二'); COMMIT;"
+开始了事务（接下来的改动要 COMMIT 才算数）
+插入了 1 行
+提交了事务，改动已经生效
+$ -d 中文库.db -e "SELECT * FROM t ORDER BY x;"
++---+----+
+| x | v  |
++---+----+
+| 1 | 一 |
+| 2 | 二 |
++---+----+
+(2 行)
+! missing 中文库.db-journal  ->  it is not there
+! exists 中文库.db  ->  it is there

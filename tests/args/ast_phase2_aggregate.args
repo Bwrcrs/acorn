@@ -1,0 +1,3 @@
+--ast
+-e
+SELECT COUNT(*), SUM(score), AVG(score), MIN(name) FROM users;

@@ -1,0 +1,4 @@
+语法错误（第 1 行第 30 列）：SQL 里字符串要用单引号，不是双引号。应该写成 'abc' 而不是 "abc"
+  SELECT * FROM t WHERE name = "abc";
+                               ^
+! exit 1

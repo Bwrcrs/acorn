@@ -1,0 +1,49 @@
+-- 阶段 5：BEGIN / COMMIT / ROLLBACK 用错地方的报错。
+--
+-- 【为什么这个用例是 .repl 而不是 .sql】
+-- 因为跑脚本文件时，一条语句出错会**中断整个文件**（runSource 直接
+-- 往外抛，main 接住、报错、退出）。那样的话一个文件只能测到第一个错，
+-- 后面几条根本没机会跑。
+-- REPL 不一样：每条语句自己出错自己报，报完接着等下一句。
+-- 这四条错正好都是"用户敲错了"而不是"数据库坏了"，
+-- 该走的就是 REPL 这条路。
+--
+-- 用内存库跑（没加 -d），所以不碰磁盘，测的就是纯语义。
+
+CREATE TABLE t (id INT);
+INSERT INTO t VALUES (1);
+
+-- ---- 没开事务就提交 ----
+-- 报错要说清"现在没有事务"，而不是一句通用的语法错：
+-- 用户九成是以为自己前面那句 BEGIN 还开着。
+COMMIT;
+
+-- ---- 没开事务就回滚 ----
+ROLLBACK;
+
+-- ---- 想嵌套事务 ----
+-- 报错之后再 BEGIN 一次，是为了证明上一条报错**没有**顺手
+-- 把什么东西改坏——BEGIN 这条路还是通的。
+BEGIN;
+BEGIN;
+INSERT INTO t VALUES (2);
+SELECT * FROM t ORDER BY id;
+ROLLBACK;
+
+-- 回滚之后那一行该没了
+SELECT * FROM t ORDER BY id;
+
+-- ---- 事务里的语句出错，事务本身不受影响 ----
+-- 这是"显式事务出错时不自动回滚"那条规则的证据。
+-- 那条 SQL 是坏的（没有叫 nope 的列），它自己不生效；
+-- 但它前面插的那一行**还该在事务里**，用户改一下重敲就行。
+BEGIN;
+INSERT INTO t VALUES (3);
+UPDATE t SET nope = 1;
+SELECT * FROM t ORDER BY id;
+COMMIT;
+
+-- 提交之后两行都在
+SELECT * FROM t ORDER BY id;
+
+.quit

@@ -1,0 +1,3 @@
+--ast
+-e
+UPDATE users SET score = score + 5, name = 'x' WHERE id = 1;

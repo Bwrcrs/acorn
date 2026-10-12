@@ -1,0 +1,34 @@
+$ -d test.db -e "CREATE TABLE a (x INT);"
+已创建表 `a`（1 列）
+! pages 3  ->  file is 12288 bytes = 3 pages
+$ -d test.db -e "DROP TABLE a;"
+删掉了表 `a`
+! pages 3  ->  file is 12288 bytes = 3 pages
+$ -d test.db -e "CREATE TABLE b (y TEXT);"
+已创建表 `b`（1 列）
+! pages 3  ->  file is 12288 bytes = 3 pages
+$ -d test.db -e "CREATE TABLE c (z TEXT);"
+已创建表 `c`（1 列）
+! pages 4  ->  file is 16384 bytes = 4 pages
+$ -d test.db -e "INSERT INTO b VALUES ('还在');"
+插入了 1 行
+$ -d test.db -e "INSERT INTO c VALUES ('也在');"
+插入了 1 行
+$ -d test.db -e "SELECT * FROM b;"
++------+
+| y    |
++------+
+| 还在 |
++------+
+(1 行)
+$ -d test.db -e "SELECT * FROM c;"
++------+
+| z    |
++------+
+| 也在 |
++------+
+(1 行)
+$ acorn -d test.db      # stdin: .tables\n
+b
+c
+! pages 4  ->  file is 16384 bytes = 4 pages

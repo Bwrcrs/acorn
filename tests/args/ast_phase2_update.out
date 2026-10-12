@@ -1,0 +1,1 @@
+(update users (set (= score (+ score 5)) (= name 'x')) where (= id 1))

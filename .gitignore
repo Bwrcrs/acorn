@@ -1,0 +1,21 @@
+# 编译产物。源码在 src/ 里，acorn.exe 是 build.bat 生成的，不该进版本库。
+acorn.exe
+*.exe
+*.o
+*.obj
+
+# 数据库的运行时文件：跑出来的库、它的锁、它的回滚日志。
+# 这些是本地数据不是源码，而且每次测试都会重新生成。
+*.db
+*.db-lock
+*.db-journal
+*.acorn
+*.acorn-lock
+*.acorn-journal
+
+# 编辑器与系统
+.vscode/
+*.swp
+*~
+Thumbs.db
+Desktop.ini

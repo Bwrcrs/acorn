@@ -1,0 +1,46 @@
+! raw empty
+! pages 0  ->  file is 0 bytes = 0 pages
+$ -d test.db -e "CREATE TABLE t (id INT, name TEXT);"
+已创建表 `t`（2 列）
+$ -d test.db -e "INSERT INTO t VALUES (1, '张三'); INSERT INTO t VALUES (2, '李四');"
+插入了 1 行
+插入了 1 行
+$ -d test.db -e "SELECT * FROM t ORDER BY id;"
++----+------+
+| id | name |
++----+------+
+| 1  | 张三 |
+| 2  | 李四 |
++----+------+
+(2 行)
+! pages 3  ->  file is 12288 bytes = 3 pages
+$ -d test.db -e "UPDATE t SET name = '王五' WHERE id = 1;"
+更新了 1 行
+$ -d test.db -e "SELECT * FROM t ORDER BY id;"
++----+------+
+| id | name |
++----+------+
+| 1  | 王五 |
+| 2  | 李四 |
++----+------+
+(2 行)
+$ -d test.db -e "DELETE FROM t WHERE id = 2;"
+删除了 1 行
+$ -d test.db -e "SELECT COUNT(*) FROM t;"
++-----------+
+| (count *) |
++-----------+
+| 1         |
++-----------+
+(1 行)
+! pages 3  ->  file is 12288 bytes = 3 pages
+$ acorn -d test.db      # stdin: .tables\n.schema\n
+t
+CREATE TABLE t (id INT, name TEXT);
+$ -d test.db -e "SELECT * FROM t;"
++----+------+
+| id | name |
++----+------+
+| 1  | 王五 |
++----+------+
+(1 行)

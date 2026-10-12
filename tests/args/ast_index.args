@@ -1,0 +1,3 @@
+--ast
+-e
+CREATE INDEX i ON users (id);

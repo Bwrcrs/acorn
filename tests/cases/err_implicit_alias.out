@@ -1,0 +1,4 @@
+语法错误（第 8 行第 13 列）：SELECT 的列写完之后要跟 FROM，读到的是 `id`
+  SELECT name id FROM t;
+              ^
+! exit 1

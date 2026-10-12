@@ -1,0 +1,3 @@
+CREATE TABLE 学生 (学号 INT);
+INSERT INTO 学生 VALUES (1);
+SELECT * FROM 学生 WHERE 学号 = ;

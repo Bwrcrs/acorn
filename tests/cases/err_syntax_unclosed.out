@@ -1,0 +1,4 @@
+语法错误（第 1 行第 30 列）：字符串没有收尾的单引号
+  SELECT * FROM t WHERE name = 'abc;
+                               ^
+! exit 1

@@ -1,0 +1,32 @@
+# 阶段 3 的核心承诺：数据真的落到了磁盘上。
+#
+# 这里每一行都是一次独立的 acorn 调用 —— 上一行的内存早就没了。
+# 所以下面每一次读出来的东西，都只能是从文件里读回来的。
+
+!raw empty
+!pages 0
+
+-d|test.db|-e|CREATE TABLE t (id INT, name TEXT);
+
+# 上面那个进程已经退出。这是一个全新的进程，什么都不知道，只能读文件。
+-d|test.db|-e|INSERT INTO t VALUES (1, '张三'); INSERT INTO t VALUES (2, '李四');
+-d|test.db|-e|SELECT * FROM t ORDER BY id;
+
+# 一页文件头、一页堆、一页目录
+!pages 3
+
+# 改一行。UPDATE 之后进程就退出了。
+-d|test.db|-e|UPDATE t SET name = '王五' WHERE id = 1;
+-d|test.db|-e|SELECT * FROM t ORDER BY id;
+
+# 删一行。删掉的行只留墓碑，它占的页不会还回来 ——
+# 所以文件既不该变大，也不该缩小。
+-d|test.db|-e|DELETE FROM t WHERE id = 2;
+-d|test.db|-e|SELECT COUNT(*) FROM t;
+!pages 3
+
+# 表结构也得是从目录页里读出来的，不能是猜的
+stdin:.tables\n.schema\n
+
+# 再开一次，结果必须还是这样
+-d|test.db|-e|SELECT * FROM t;

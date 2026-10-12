@@ -1,0 +1,4 @@
+语法错误（第 4 行第 24 列）：LIMIT 后面要跟一个非负整数，读到的是 `-`
+  SELECT id FROM t LIMIT -1;
+                         ^
+! exit 1

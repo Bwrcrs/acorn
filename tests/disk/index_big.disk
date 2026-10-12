@@ -1,0 +1,87 @@
+# 阶段 4：索引在几百行上的样子。
+#
+# 【为什么非要几百行】小表测不出 B+ 树：几十行全塞在一个叶子页里，
+# 分裂、路由、分裂点搜索这些代码一行都不会跑。这里用 !bulk 造 400 行，
+# 逼出好几个叶子页和至少一层内部节点。
+#
+# 而且每一行都是一次独立的 acorn 调用，所以"索引目录能落盘、
+# 重开还能用"是顺带测掉的 —— 索引的根页号要是没写回目录记录，
+# 下一次打开就是一棵谁都找不到的树。
+
+-d|test.db|-e|CREATE TABLE d (id INT, v TEXT);
+-d|test.db|-e|CREATE TABLE d2 (id INT, v TEXT);
+
+# 两张一模一样的表，只给 d 建索引。
+# 之后每条查询都在两张表上各跑一次，答案必须**一个字都不差**。
+# 这是"加索引只让它变快"这句话唯一能被机器验证的形式。
+!bulk d|400|20
+!bulk d2|400|20
+
+-d|test.db|-e|CREATE INDEX d_id ON d (id);
+-d|test.db|-e|CREATE INDEX d_v ON d (v);
+
+# 等值。id 是唯一的，走索引查出 1 行。
+-d|test.db|-e|SELECT id FROM d WHERE id = 200;
+-d|test.db|-e|SELECT id FROM d2 WHERE id = 200;
+
+# 范围：id > 350 的有 50 行
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE id > 350;
+-d|test.db|-e|SELECT COUNT(*) FROM d2 WHERE id > 350;
+
+# 【重复键 —— 这一条是这份测试的核心】
+# v 这一列 400 行全是同一个值，所以索引里有 400 个一模一样的键，
+# 它们**一定跨了好几个叶子页**。
+#
+# 这正是键设计成 (值, 行号) 而不是光一个值的原因：
+# 只按值找的话，走到一个叶子页里发现"这里的键都等于目标值，
+# 但没找到我要的那一行"时，就不知道该往右走还是停下 ——
+# 同一层里没有第二个一样大的键可以指路了。
+# 而跨页的那些重复键会**静悄悄地丢**。
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE v = 'xxxxxxxxxxxxxxxxxxxx';
+-d|test.db|-e|SELECT COUNT(*) FROM d2 WHERE v = 'xxxxxxxxxxxxxxxxxxxx';
+
+# 抽三行出来，看回表读到的内容对不对（不是只数个数）
+-d|test.db|-e|SELECT id FROM d WHERE v = 'xxxxxxxxxxxxxxxxxxxx' ORDER BY id LIMIT 3;
+-d|test.db|-e|SELECT id, v FROM d WHERE id = 399;
+
+# 两头的边界
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE id >= 1 AND id <= 400;
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE id < 1;
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE id > 400;
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE id >= 400;
+
+# 索引列上的条件 + 非索引列上的条件
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE id > 390 AND v <> 'nope';
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE id > 390 AND v = 'xxxxxxxxxxxxxxxxxxxx';
+
+# 聚合
+-d|test.db|-e|SELECT COUNT(*), SUM(id), MIN(id), MAX(id) FROM d WHERE id >= 100;
+-d|test.db|-e|SELECT COUNT(*), SUM(id) FROM d2 WHERE id >= 100;
+
+# 重开一次（这一行本身就是一个新进程），索引还得在
+-d|test.db|-e|SELECT COUNT(*) FROM d WHERE v = 'xxxxxxxxxxxxxxxxxxxx';
+-d|test.db|-e|SELECT id FROM d WHERE id = 1;
+
+stdin:.indexes\n
+stdin:.schema d\n
+stdin:.info\n
+
+# 整个场景一共用了多少页。前 10 页是能直接推出来的：
+#   0-1    文件头 + 表目录
+#   2-5    d 的堆：400 行 × (34 字节格子 + 4 字节槽位) = 15200 字节，
+#          一页装 107 行，所以正好 4 页
+#   6-9    d2 的堆：同上
+#
+# 剩下 12 页是两棵树加一页索引目录。这一半**推不出来**，是量出来的：
+#   d_id（唯一键，项 19 字节）  树 4 页 + 索引目录 1 页
+#   d_v （400 个一样的键，项 35 字节）  树 7 页
+#
+# 【为什么占得比"数据量 ÷ 页大小"多得多】
+# 400 个 19 字节的项一共才 7600 字节，一页就装得下小一半，
+# 可它占了 4 页 —— 因为叶子页满了就**对半分**，平均只有五六成满。
+# 这是"分裂点选在让左右两边字节数最接近的地方"的直接后果
+# （见 btree.cpp 里的分裂点搜索），不是浪费，是拿空间换树高。
+#
+# 这个数字把两棵树的形状钉住了。哪天分裂策略改了这里会亮，
+# 那时候该做的是确认新形状确实对，再更新这个数 —— 不是把数改大。
+!pages 22

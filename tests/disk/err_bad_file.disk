@@ -1,0 +1,24 @@
+# 拒绝不是自己的文件。四个分支各来一次。
+#
+# 每一条都必须是"说清楚哪里不对"，而不是崩掉或者读出一堆垃圾 ——
+# 尤其是页大小不对那条：它不会崩，只会让后面每个偏移都错位。
+#
+# 后面每次都用 !bytes 断言文件一个字节都没被动过：
+# 校验失败必须发生在任何写入之前。100 字节那个坏文件是 0 页，
+# 所以这里不能拿页数说事，得直接看字节数。
+
+!raw badsize
+-d|test.db|-e|SELECT * FROM t;
+!bytes 100
+
+!raw magic
+-d|test.db|-e|SELECT * FROM t;
+!bytes 4096
+
+!raw version
+-d|test.db|-e|SELECT * FROM t;
+!bytes 4096
+
+!raw pagesize
+-d|test.db|-e|SELECT * FROM t;
+!bytes 4096

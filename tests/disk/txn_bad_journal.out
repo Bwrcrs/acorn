@@ -1,0 +1,15 @@
+$ -d test.db -e "CREATE TABLE t (id INT, v TEXT);"
+已创建表 `t`（2 列）
+$ -d test.db -e "INSERT INTO t VALUES (1,'safe');"
+插入了 1 行
+! pages 3  ->  file is 12288 bytes = 3 pages
+! raw journalbad
+! exists test.db-journal  ->  it is there
+$ -d test.db -e "SELECT * FROM t;"
+错误：日志文件 test.db-journal 的头读不出来（不是一个完整的回滚日志）。
+        这说明上一次退出时正在写这个日志，而库文件可能停在一半的状态。
+        为了不把数据改得更坏，程序不会动这个库。
+        如果确认库文件是好的，把这个日志文件删掉再试。
+! exit 2
+! bytes 12288  ->  file is 12288 bytes
+! exists test.db-journal  ->  it is there

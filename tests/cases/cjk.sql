@@ -1,0 +1,6 @@
+CREATE TABLE 学生 (学号 INT, 姓名 TEXT, 成绩 REAL);
+INSERT INTO 学生 VALUES (1, '张三', 91.5);
+INSERT INTO 学生 VALUES (2, '李四', 78.0);
+INSERT INTO 学生 VALUES (3, '王五', 88.25);
+SELECT * FROM 学生;
+SELECT 姓名, 成绩 FROM 学生 WHERE 成绩 > 80;

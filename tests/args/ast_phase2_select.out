@@ -1,0 +1,1 @@
+(select (name (+ (* score 2) 1)) from users where (IS NOT NULL score) (order-by (desc score) (asc name)) (limit 3 offset 1))

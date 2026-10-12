@@ -1,0 +1,120 @@
+$ -d test.db -e "CREATE TABLE t (id INT, v TEXT);"
+已创建表 `t`（2 列）
+$ -d test.db -e "INSERT INTO t VALUES (1,'a'),(2,'b'),(3,'c');"
+插入了 3 行
+$ -d test.db -e "CREATE INDEX t_id ON t (id);"
+已在表 `t` 的列 `id` 上建好索引 `t_id`
+$ -d test.db -e "SELECT id FROM t WHERE id = 2;"
++----+
+| id |
++----+
+| 2  |
++----+
+(1 行)
+$ acorn -d test.db      # stdin: .indexes\n
+CREATE INDEX t_id ON t (id);
+! pages 5  ->  file is 20480 bytes = 5 pages
+$ -d test.db -e "DROP INDEX t_id;"
+删掉了索引 `t_id`
+! pages 5  ->  file is 20480 bytes = 5 pages
+$ acorn -d test.db      # stdin: .indexes\n
+一个索引都还没有。用 CREATE INDEX 建一个吧。
+（表小的时候不建也行——索引是为了让查询不用把整张表读一遍）
+$ -d test.db -e "SELECT id FROM t WHERE id = 2;"
++----+
+| id |
++----+
+| 2  |
++----+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM t WHERE id >= 1;"
++-----------+
+| (count *) |
++-----------+
+| 3         |
++-----------+
+(1 行)
+$ -d test.db -e "CREATE INDEX t_id ON t (id);"
+已在表 `t` 的列 `id` 上建好索引 `t_id`
+$ -d test.db -e "SELECT id FROM t WHERE id = 2;"
++----+
+| id |
++----+
+| 2  |
++----+
+(1 行)
+$ -d test.db -e "DROP INDEX nope;"
+错误：没有叫 `nope` 的索引（现在有：t_id）
+! exit 1
+$ -d test.db -e "CREATE TABLE keep (x INT);"
+已创建表 `keep`（1 列）
+$ -d test.db -e "CREATE INDEX keep_x ON keep (x);"
+已在表 `keep` 的列 `x` 上建好索引 `keep_x`
+$ -d test.db -e "DROP TABLE t;"
+删掉了表 `t`
+$ acorn -d test.db      # stdin: .tables\n
+keep
+$ acorn -d test.db      # stdin: .indexes\n
+CREATE INDEX keep_x ON keep (x);
+$ -d test.db -e "INSERT INTO keep VALUES (7);"
+插入了 1 行
+$ -d test.db -e "SELECT x FROM keep WHERE x = 7;"
++---+
+| x |
++---+
+| 7 |
++---+
+(1 行)
+$ -d test.db -e "SELECT * FROM t;"
+错误：没有叫 `t` 的表（现在有：keep）
+! exit 1
+$ -d test.db -e "CREATE TABLE t (id INT, v TEXT);"
+已创建表 `t`（2 列）
+$ -d test.db -e "CREATE INDEX t_id ON t (id);"
+已在表 `t` 的列 `id` 上建好索引 `t_id`
+$ -d test.db -e "INSERT INTO t VALUES (42,'z');"
+插入了 1 行
+$ -d test.db -e "SELECT v FROM t WHERE id = 42;"
++---+
+| v |
++---+
+| z |
++---+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM t;"
++-----------+
+| (count *) |
++-----------+
+| 1         |
++-----------+
+(1 行)
+$ acorn -d test.db      # stdin: .schema\n
+CREATE TABLE keep (x INT);
+CREATE INDEX keep_x ON keep (x);
+CREATE TABLE t (id INT, v TEXT);
+CREATE INDEX t_id ON t (id);
+! pages 7  ->  file is 28672 bytes = 7 pages
+$ -d test.db -e "SELECT COUNT(*) FROM t WHERE id = 42;"
++-----------+
+| (count *) |
++-----------+
+| 1         |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM keep WHERE x = 7;"
++-----------+
+| (count *) |
++-----------+
+| 1         |
++-----------+
+(1 行)
+$ acorn -d test.db      # stdin: .tables\n.indexes\n.info\n
+keep
+t
+CREATE INDEX keep_x ON keep (x);
+CREATE INDEX t_id ON t (id);
+库的位置：test.db
+表：2 张，索引：2 个
+缓存 3/64 格在用，其中 0 页待写回、0 页被借出；文件共 7 页
+锁：共享（只能读；别的读者也能同时进来，但谁都写不了）
+! pages 7  ->  file is 28672 bytes = 7 pages

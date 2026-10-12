@@ -1,0 +1,2 @@
+-e
+CREATE TABLE 学生 (姓名 TEXT); INSERT INTO 学生 VALUES ('张三'); SELECT * FROM 学生;

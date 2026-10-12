@@ -1,0 +1,4 @@
+语法错误（第 2 行第 29 列）：比较不能连写，`a = b = c` 在 SQL 里没有意义。想表达两个条件同时成立，中间要写 AND
+  SELECT * FROM t WHERE a = b = c;
+                              ^
+! exit 1

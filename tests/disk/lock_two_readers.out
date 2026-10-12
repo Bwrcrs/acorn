@@ -1,0 +1,21 @@
+$ -d test.db -e "CREATE TABLE t (id INT, v TEXT); INSERT INTO t VALUES (1,'one');"
+已创建表 `t`（2 列）
+插入了 1 行
+! bg --hold=2500  (SQL: SELECT * FROM t;)
+! bg is up: it holds the database now
+$ -d test.db -e "SELECT * FROM t;"
++----+-----+
+| id | v   |
++----+-----+
+| 1  | one |
++----+-----+
+(1 行)
+! wait -> it is gone
+! --- its stdout ---
++----+-----+
+| id | v   |
++----+-----+
+| 1  | one |
++----+-----+
+(1 行)
+[--hold] 库还开着，锁还拿着，等 2500 毫秒再退。

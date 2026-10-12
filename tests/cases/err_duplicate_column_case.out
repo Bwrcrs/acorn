@@ -1,0 +1,4 @@
+语法错误（第 2 行第 25 列）：列名 `ID` 重复了
+  CREATE TABLE t (id INT, ID TEXT);
+                          ^
+! exit 1

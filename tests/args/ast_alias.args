@@ -1,0 +1,3 @@
+--ast
+-e
+SELECT COUNT(*) AS 人数, score * 2 AS 双倍 FROM t ORDER BY 双倍 DESC;

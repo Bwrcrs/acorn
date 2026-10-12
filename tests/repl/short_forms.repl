@@ -1,0 +1,5 @@
+.h
+CREATE TABLE a (x INT);
+CREATE TABLE b (y TEXT);
+.tables
+.q

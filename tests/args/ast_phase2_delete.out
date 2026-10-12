@@ -1,0 +1,1 @@
+(delete users where (IS NULL score))

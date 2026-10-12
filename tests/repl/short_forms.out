@@ -1,0 +1,58 @@
+命令（都以点开头，后面可以跟分号也可以不跟）：
+  .help            显示这份帮助
+  .tables          列出所有表
+  .indexes         列出所有索引
+  .schema          显示所有表和索引的定义
+  .schema <表名>   只显示某一张表（连着它的索引）
+  .info            当前的库是哪个文件、页缓存什么状况
+  .quit            退出（也可以直接敲 exit 或 quit）
+
+阶段 5 支持的 SQL：
+  CREATE TABLE 名 (列名 类型, ...)     类型有 INT / REAL / TEXT / BOOL
+  INSERT INTO 名 VALUES (...), (...);
+  SELECT * | 列 [AS 别名], ... FROM 名
+         [WHERE 条件] [ORDER BY 键 [DESC], ...] [LIMIT n [OFFSET m]];
+  UPDATE 名 SET 列 = 值, ... [WHERE 条件];
+  DELETE FROM 名 [WHERE 条件];
+  CREATE INDEX 索引名 ON 表名 (列名);
+  DROP INDEX 索引名;
+  DROP TABLE 名;                      连带删掉它的所有索引
+  BEGIN;  COMMIT;  ROLLBACK;          事务
+
+  选择列表里可以写表达式：SELECT score * 2 + 1 FROM 名
+  聚合函数：COUNT(*) / COUNT(列) / SUM / AVG / MIN / MAX
+  别名只在 ORDER BY 里能用（WHERE 里看不见，标准 SQL 也这样）
+  判空：IS NULL / IS NOT NULL（不能写 = NULL，那是恒为 UNKNOWN 的）
+  注意 ORDER / AS / DROP / INDEX / ON / BEGIN / COMMIT / ROLLBACK
+  是保留字，不能拿来做名字
+
+事务是干什么的：
+  BEGIN 和 COMMIT 之间的改动是一个整体——要么全算数，
+  要么（敲 ROLLBACK，或者中途出错）全部当没发生过。
+  没写 BEGIN 时，每条语句自己就是一个事务：跑到一半出错
+  的那条会整个撤销，不会留下改了一半的数据。
+  事务不能嵌套（BEGIN 里面不能再 BEGIN）。
+
+同时打开一个库的几个进程：
+  读的能一起读，写的独占——任何时刻最多一个进程在写。
+  别人占着的时候你这条语句会直接报错（不会静静地卡住），
+  想等一会儿就加 --lock-wait=<毫秒>。
+  ★ 这是加锁，不是快照：读会挡住写，写也会挡住读。
+  敲 .info 能看到这个进程现在拿着什么锁。
+
+索引是干什么的：
+  建了索引之后，`WHERE 那一列 = 值` 和 `WHERE 那一列 > 值`
+  这种条件就不用把整张表读一遍了。查询结果和没建索引时
+  **一模一样**，只是快——这件事是保证的，测在测试里。
+  只有单列索引，而且只用在顶层 AND 里的条件上。
+
+数据存哪：不加 -d 就是内存库，关掉就没了。
+          acorn -d my.acorn 才会存到文件里。
+
+调试开关（在命令行上用）：--tokens 看词法分析，--ast 看语法树
+  （还有个测试专用的 --crash-at=commit|exit，故意让程序崩，
+    用来验证崩溃恢复，正常用不上）
+已创建表 `a`（1 列）
+已创建表 `b`（1 列）
+a
+b

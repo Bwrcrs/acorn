@@ -1,0 +1,20 @@
+! raw badsize
+$ -d test.db -e "SELECT * FROM t;"
+错误：文件 test.db 的大小是 100 字节，不是 4096 的整数倍——它不像是一个 Acorn 数据库文件
+! exit 2
+! bytes 100  ->  file is 100 bytes
+! raw magic
+$ -d test.db -e "SELECT * FROM t;"
+错误：这不是一个 Acorn 数据库文件：test.db（开头的 5 个字节不是 ACORN）。换个文件名，或者先把它挪走
+! exit 2
+! bytes 4096  ->  file is 4096 bytes
+! raw version
+$ -d test.db -e "SELECT * FROM t;"
+错误：这不是一个 Acorn 数据库文件：test.db（格式版本是 99，本程序只认 2）。换个文件名，或者先把它挪走
+! exit 2
+! bytes 4096  ->  file is 4096 bytes
+! raw pagesize
+$ -d test.db -e "SELECT * FROM t;"
+错误：这不是一个 Acorn 数据库文件：test.db（页大小是 2048 字节，本程序只认 4096）。换个文件名，或者先把它挪走
+! exit 2
+! bytes 4096  ->  file is 4096 bytes

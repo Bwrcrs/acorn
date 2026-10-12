@@ -1,0 +1,3 @@
+--ast
+-e
+SELECT -a % 2, NOT flag, a / b - c FROM t;

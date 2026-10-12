@@ -1,0 +1,37 @@
+# 阶段 5：事务跨进程。
+#
+# 【为什么非要跨进程】因为"提交了"和"没提交"的区别如果只在
+# 内存里成立，那这个数据库的事务就是个摆设。真正的判据是：
+# 关掉程序、重新打开，改动的**在不在**。
+#
+# 而且这里每一行都是一次独立的 acorn 调用，所以第二行看到的
+# 东西完全来自磁盘——包括"日志文件删掉了没有"这件事本身。
+
+-d|test.db|-e|CREATE TABLE t (id INT, v TEXT);
+-d|test.db|-e|INSERT INTO t VALUES (1,'base');
+
+# ---- 提交：下一次打开还在 ----
+-d|test.db|-e|BEGIN; INSERT INTO t VALUES (2,'committed'); COMMIT;
+-d|test.db|-e|SELECT * FROM t ORDER BY id;
+
+# 提交完日志必须不在。"提交"这个动作**就是**删日志，
+# 日志还在的话，下一次打开会把这次提交整个退回去。
+!missing test.db-journal
+
+# ---- 回滚：下一次打开不在 ----
+-d|test.db|-e|BEGIN; INSERT INTO t VALUES (3,'rolled back'); ROLLBACK;
+-d|test.db|-e|SELECT * FROM t ORDER BY id;
+!missing test.db-journal
+
+# ---- 事务开着不退，进程结束 = 回滚 ----
+# 这条走的是 Pager 析构那条路（和 SQLite 一样），
+# 它会先提醒一句，然后把改动退掉。
+-d|test.db|-e|BEGIN; INSERT INTO t VALUES (4,'never committed');
+-d|test.db|-e|SELECT * FROM t ORDER BY id;
+
+# ---- 事务里改索引列，回滚之后索引和表还是一致的 ----
+-d|test.db|-e|CREATE INDEX t_id ON t (id);
+-d|test.db|-e|BEGIN; UPDATE t SET id = 99 WHERE id = 1; ROLLBACK;
+-d|test.db|-e|SELECT * FROM t WHERE id = 1;
+-d|test.db|-e|SELECT * FROM t WHERE id = 99;
+-d|test.db|-e|SELECT COUNT(*) FROM t;

@@ -1,0 +1,26 @@
+# 目录页也得能读回来。关掉再打开，有几张表、每张表什么结构，
+# 只能是从文件里读出来的 —— 内存里那份随着进程一起没了。
+
+-d|test.db|-e|CREATE TABLE 学生 (姓名 TEXT, 分数 INT);
+-d|test.db|-e|CREATE TABLE 课程 (名称 TEXT, 学分 INT);
+
+# 换进程插入
+-d|test.db|-e|INSERT INTO 学生 VALUES ('张三', 90); INSERT INTO 学生 VALUES ('李四', 75);
+-d|test.db|-e|INSERT INTO 课程 VALUES ('数据库', 4);
+
+# 又一次全新进程：表名、列名、类型、数据全得从文件里来
+stdin:.tables\n.schema\n
+
+-d|test.db|-e|SELECT * FROM 学生 ORDER BY 分数 DESC;
+-d|test.db|-e|SELECT AVG(分数), COUNT(*) FROM 学生;
+-d|test.db|-e|SELECT * FROM 课程;
+
+!pages 4
+
+# 删掉一张表，另一张不受影响
+-d|test.db|-e|DROP TABLE 课程;
+stdin:.tables\n
+-d|test.db|-e|SELECT COUNT(*) FROM 学生;
+
+# DROP 之后的库关掉再打开，删掉的表不能又冒出来
+stdin:.tables\n

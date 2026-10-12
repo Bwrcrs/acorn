@@ -1,0 +1,31 @@
+# 阶段 5：事务开着，进程没了。
+#
+# 【和 txn_crash_commit 的区别】那个崩在提交之后（数据已在库里），
+# 这个崩在提交之前。库文件里大概率一个字都没变，日志里躺着旧页。
+#
+# 两条路的结果必须一样：**下次打开时那次事务不存在**。
+# 差别只在恢复要做多少活——这里可能一页都不用写回去，
+# 但日志必须删掉，因为"日志还在"就意味着"还有一笔没结的账"。
+
+-d|test.db|-e|CREATE TABLE t (id INT, v TEXT);
+-d|test.db|-e|INSERT INTO t VALUES (1,'base');
+!missing test.db-journal
+
+# 事务开着走到进程退出。~Pager 里在回滚之前就 _Exit 了，
+# 所以回滚没跑成，日志留在磁盘上——这一步模拟的就是掉电。
+-d|test.db|--crash-at=exit|-e|BEGIN; INSERT INTO t VALUES (2,'doomed');
+
+!exists test.db-journal
+
+# 再打开一次，恢复走完
+-d|test.db|-e|SELECT * FROM t ORDER BY id;
+!missing test.db-journal
+!pages 3
+
+# ---- 自动提交模式下，同一个崩点根本不会响 ----
+# 因为语句跑完就已经提交了，退出那一刻事务是关着的，
+# ~Pager 里那个 if (inTransaction_) 进不去，于是安安稳稳地退出。
+# 这条是"自动提交真的在自动提交"的证据：不是没崩，是没东西可崩。
+-d|test.db|--crash-at=exit|-e|INSERT INTO t VALUES (3,'autocommit');
+!missing test.db-journal
+-d|test.db|-e|SELECT * FROM t ORDER BY id;

@@ -1,0 +1,26 @@
+# 页缓存只有 64 格。这张表要长得足够让一次扫描把它们全部用光、
+# 逼着缓存反复淘汰重读 —— 淘汰要是把脏页丢了，或者把页号搞错了，
+# 这里读出来的数字就不对了。
+#
+# 算术：
+#   每行 cell = 1+4+300(文本) + 1+8(整数) = 314，加 4 字节槽位 = 318
+#   4084 / 318 = 12.8 -> 一页 12 行
+#   1000 行 -> ceil(1000/12) = 84 个堆页
+#   加文件头 + 目录页 = 86 页   （远大于 64 格缓存）
+
+-d|test.db|-e|CREATE TABLE big (id INT, tag TEXT);
+!bulk big|1000|300
+!pages 86
+
+# 扫全表：这一步要把 84 个页轮流读进来，缓存必然淘汰很多次
+-d|test.db|-e|SELECT COUNT(*), SUM(id), MIN(id), MAX(id) FROM big;
+
+# 内容抽查：1000 行文本都得是原样，不能因为淘汰重读被弄坏
+-d|test.db|-e|SELECT COUNT(*) FROM big WHERE tag = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+# 挑中间几个 id 出来，确认它们各自在正确的页上
+-d|test.db|-e|SELECT id FROM big WHERE id = 1 OR id = 500 OR id = 1000;
+
+# 全新进程再来一次全表扫描，结果必须一样
+-d|test.db|-e|SELECT COUNT(*), SUM(id) FROM big;
+-d|test.db|-e|SELECT COUNT(*) FROM big WHERE tag = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';

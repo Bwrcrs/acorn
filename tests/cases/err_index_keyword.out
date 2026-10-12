@@ -1,0 +1,4 @@
+语法错误（第 1 行第 14 列）：这里要写表名，但 `index` 是 SQL 关键字，不能当名字用，换一个吧
+  CREATE TABLE index (id INT);
+               ^
+! exit 1

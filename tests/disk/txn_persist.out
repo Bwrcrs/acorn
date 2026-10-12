@@ -1,0 +1,68 @@
+$ -d test.db -e "CREATE TABLE t (id INT, v TEXT);"
+已创建表 `t`（2 列）
+$ -d test.db -e "INSERT INTO t VALUES (1,'base');"
+插入了 1 行
+$ -d test.db -e "BEGIN; INSERT INTO t VALUES (2,'committed'); COMMIT;"
+开始了事务（接下来的改动要 COMMIT 才算数）
+插入了 1 行
+提交了事务，改动已经生效
+$ -d test.db -e "SELECT * FROM t ORDER BY id;"
++----+-----------+
+| id | v         |
++----+-----------+
+| 1  | base      |
+| 2  | committed |
++----+-----------+
+(2 行)
+! missing test.db-journal  ->  it is not there
+$ -d test.db -e "BEGIN; INSERT INTO t VALUES (3,'rolled back'); ROLLBACK;"
+开始了事务（接下来的改动要 COMMIT 才算数）
+插入了 1 行
+回滚了事务，改动都退回去了
+$ -d test.db -e "SELECT * FROM t ORDER BY id;"
++----+-----------+
+| id | v         |
++----+-----------+
+| 1  | base      |
+| 2  | committed |
++----+-----------+
+(2 行)
+! missing test.db-journal  ->  it is not there
+$ -d test.db -e "BEGIN; INSERT INTO t VALUES (4,'never committed');"
+开始了事务（接下来的改动要 COMMIT 才算数）
+插入了 1 行
+提醒：事务还开着，没有 COMMIT。进程退出会把里面的改动全部撤销（想留下来就敲 COMMIT）。
+$ -d test.db -e "SELECT * FROM t ORDER BY id;"
++----+-----------+
+| id | v         |
++----+-----------+
+| 1  | base      |
+| 2  | committed |
++----+-----------+
+(2 行)
+$ -d test.db -e "CREATE INDEX t_id ON t (id);"
+已在表 `t` 的列 `id` 上建好索引 `t_id`
+$ -d test.db -e "BEGIN; UPDATE t SET id = 99 WHERE id = 1; ROLLBACK;"
+开始了事务（接下来的改动要 COMMIT 才算数）
+更新了 1 行
+回滚了事务，改动都退回去了
+$ -d test.db -e "SELECT * FROM t WHERE id = 1;"
++----+------+
+| id | v    |
++----+------+
+| 1  | base |
++----+------+
+(1 行)
+$ -d test.db -e "SELECT * FROM t WHERE id = 99;"
++----+---+
+| id | v |
++----+---+
++----+---+
+(0 行)
+$ -d test.db -e "SELECT COUNT(*) FROM t;"
++-----------+
+| (count *) |
++-----------+
+| 2         |
++-----------+
+(1 行)

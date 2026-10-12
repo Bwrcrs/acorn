@@ -1,0 +1,1 @@
+(select ((as (count *) 人数) (as (* score 2) 双倍)) from t (order-by (desc 双倍)))

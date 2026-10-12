@@ -1,0 +1,105 @@
+$ -d test.db -e "CREATE TABLE m (id INT, v TEXT);"
+已创建表 `m`（2 列）
+! bulk m: 200 rows x 20 byte text -> bulk.sql
+$ -d test.db bulk.sql
+插入了 200 行
+$ -d test.db -e "CREATE INDEX m_id ON m (id);"
+已在表 `m` 的列 `id` 上建好索引 `m_id`
+$ -d test.db -e "SELECT id FROM m WHERE id = 25;"
++----+
+| id |
++----+
+| 25 |
++----+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM m WHERE id >= 1;"
++-----------+
+| (count *) |
++-----------+
+| 200       |
++-----------+
+(1 行)
+$ -d test.db -e "UPDATE m SET v = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy' WHERE id = 25;"
+更新了 1 行
+$ -d test.db -e "SELECT id FROM m WHERE id = 25;"
++----+
+| id |
++----+
+| 25 |
++----+
+(1 行)
+$ -d test.db -e "SELECT id, v FROM m WHERE id = 25;"
++----+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| id | v                                                                                                                                                                                                                                                                                                            |
++----+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 25 | yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy |
++----+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM m WHERE id = 25;"
++-----------+
+| (count *) |
++-----------+
+| 1         |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*), SUM(id) FROM m;"
++-----------+----------+
+| (count *) | (sum id) |
++-----------+----------+
+| 200       | 20100    |
++-----------+----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM m WHERE id >= 1;"
++-----------+
+| (count *) |
++-----------+
+| 200       |
++-----------+
+(1 行)
+$ -d test.db -e "UPDATE m SET id = 999 WHERE id = 25;"
+更新了 1 行
+$ -d test.db -e "SELECT id FROM m WHERE id = 999;"
++-----+
+| id  |
++-----+
+| 999 |
++-----+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM m WHERE id = 25;"
++-----------+
+| (count *) |
++-----------+
+| 0         |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM m WHERE id = 999;"
++-----------+
+| (count *) |
++-----------+
+| 1         |
++-----------+
+(1 行)
+$ -d test.db -e "DELETE FROM m WHERE id = 999;"
+删除了 1 行
+$ -d test.db -e "SELECT COUNT(*) FROM m WHERE id = 999;"
++-----------+
+| (count *) |
++-----------+
+| 0         |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*), SUM(id) FROM m;"
++-----------+----------+
+| (count *) | (sum id) |
++-----------+----------+
+| 199       | 20075    |
++-----------+----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM m WHERE id > 0;"
++-----------+
+| (count *) |
++-----------+
+| 199       |
++-----------+
+(1 行)
+! pages 6  ->  file is 24576 bytes = 6 pages

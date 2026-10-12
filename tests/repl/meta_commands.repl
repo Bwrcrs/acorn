@@ -1,0 +1,7 @@
+.help
+CREATE TABLE users (id INT, name TEXT);
+INSERT INTO users VALUES (1, 'alice');
+.tables
+.schema
+.schema users
+.quit

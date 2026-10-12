@@ -1,0 +1,57 @@
+# 阶段 4：行搬了家，索引项里存的行号必须跟着搬。
+#
+# 【这是整条写路径上最贵的一个坑】
+# 索引项里存的是 (行号)，而行号是 (页号, 页内第几个槽位)。
+# 一行被 UPDATE 撑大之后，本页装不下，它会带着新行号搬到别处，
+# 老位置留一个墓碑（见 grow_move.sql 和 heapCompact 的说明）。
+#
+# 这时候索引项要是还指着老行号，回表读到的就是墓碑 —— 或者更糟，
+# 那个槽位被后面插的行复用了，读到的是**别人的数据**。
+# 而且整个过程不报任何错。
+
+-d|test.db|-e|CREATE TABLE m (id INT, v TEXT);
+
+# 200 行 × 34 字节/行：第一页大概装 107 行就满了，第 25 行在第一页上，
+# 而那时候第一页只剩不到 38 字节（一个槽位 + 一个格子的量）。
+# 所以下面把它一撑大，它**一定**装不回原地，只能搬家。
+!bulk m|200|20
+
+# 索引建在 id 上，而且是在数据之后建的 —— 顺便测 createIndex 的全表扫
+-d|test.db|-e|CREATE INDEX m_id ON m (id);
+
+# 搬家之前：查得到，而且只有一行
+-d|test.db|-e|SELECT id FROM m WHERE id = 25;
+-d|test.db|-e|SELECT COUNT(*) FROM m WHERE id >= 1;
+
+# 把第 25 行撑大。新格子是 314 字节，第一页剩下的空间不够，
+# 它必须搬到另一页去 —— 也就是说它的行号变了。
+-d|test.db|-e|UPDATE m SET v = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy' WHERE id = 25;
+
+# 现在用索引把它查回来。查得到 = 索引项跟着搬了家。
+-d|test.db|-e|SELECT id FROM m WHERE id = 25;
+# 内容也得是搬过去的那一份，不能是墓碑或者别人的行
+-d|test.db|-e|SELECT id, v FROM m WHERE id = 25;
+# 只能有一行，不能因为搬家变成两行
+-d|test.db|-e|SELECT COUNT(*) FROM m WHERE id = 25;
+# 别的行一行都没少
+-d|test.db|-e|SELECT COUNT(*), SUM(id) FROM m;
+-d|test.db|-e|SELECT COUNT(*) FROM m WHERE id >= 1;
+
+# 搬过家的那一行，再改一次它的索引列：老键按**新行号**删，新键按新行号插
+-d|test.db|-e|UPDATE m SET id = 999 WHERE id = 25;
+-d|test.db|-e|SELECT id FROM m WHERE id = 999;
+-d|test.db|-e|SELECT COUNT(*) FROM m WHERE id = 25;
+-d|test.db|-e|SELECT COUNT(*) FROM m WHERE id = 999;
+
+# 最后删掉它：删的也是新行号
+-d|test.db|-e|DELETE FROM m WHERE id = 999;
+-d|test.db|-e|SELECT COUNT(*) FROM m WHERE id = 999;
+-d|test.db|-e|SELECT COUNT(*), SUM(id) FROM m;
+
+# 重开一次，索引目录里的根页号还得是对的
+-d|test.db|-e|SELECT COUNT(*) FROM m WHERE id > 0;
+
+# 6 页：文件头、表目录、m 的堆两页（200 行分两页装）、
+# m_id 的树一页（200 个项塞得进一个叶子页，所以没分裂）、索引目录一页。
+# 撑大那一行只是**换了页**，没有要新页 —— 所以这里不涨。
+!pages 6

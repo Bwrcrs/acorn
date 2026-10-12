@@ -1,0 +1,4 @@
+CREATE TABLE a (x INT);
+CREATE TABLE b (y INT);
+CREATE INDEX i ON a (x);
+CREATE INDEX i ON b (y);

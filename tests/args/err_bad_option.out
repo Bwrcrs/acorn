@@ -1,0 +1,42 @@
+不认识的选项：--nope
+Acorn —— 从零手写的小数据库
+
+用法：
+  acorn                      进 REPL（交互式）
+  acorn <文件.sql>           跑一个 SQL 脚本
+  acorn -e "<SQL>"           直接跑一段 SQL
+
+数据库文件：
+  -d <文件>                  把数据存到这个文件里
+
+  ★ 不加 -d 就是内存库：跑完就没了。★
+    想留住数据，一定要加 -d。
+
+事务：
+  BEGIN; ... COMMIT;         中间的改动一起生效
+  BEGIN; ... ROLLBACK;       或者一起撤销
+  （不写 BEGIN 的话，每条语句自己就是一个事务）
+
+几个进程一起用同一个库：
+  读的可以一起读，写的独占——一个库同时只有一个写者。
+  抢不到锁会直接报错（不会静静地卡住）。愿意等就加：
+  --lock-wait=<毫秒>         抢不到锁时最多等这么久
+
+调试开关：
+  --tokens                   只做词法分析，打印 Token 流
+  --ast                      只做语法分析，打印语法树
+  --crash-at=commit|exit     测试专用：故意在事务中途崩掉
+  --hold=<毫秒>              测试专用：干完活先别退，把库多开一会儿
+  -h, --help                 显示这份帮助
+
+例子：
+  acorn -d my.acorn -e "CREATE TABLE users (id INT, name TEXT);"
+  acorn -d my.acorn -e "INSERT INTO users VALUES (1, 'alice');"
+  acorn -d my.acorn -e "SELECT * FROM users;"     <- 上一次插的还在
+  acorn -d my.acorn -e "CREATE INDEX i ON users (id);"
+  acorn -d my.acorn -e "BEGIN; INSERT INTO users VALUES (2, 'bob'); ROLLBACK;"
+  acorn -e "SELECT COUNT(*) FROM users;"          <- 内存库，这里会报表不存在
+  acorn --ast -e "SELECT * FROM t WHERE a = 1"
+
+进 REPL 后敲 .help 看完整语法。
+! exit 1

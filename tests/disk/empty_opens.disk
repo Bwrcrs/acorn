@@ -1,0 +1,18 @@
+# 一个 0 字节的文件是合法的 —— 它就是"还没写过东西的新库"。
+# 但不能因此就把别人的文件也当成新库（那是 err_bad_file 管的事）。
+
+!raw empty
+!pages 0
+
+# 只读一次，什么都没建。库会被初始化，文件头那一页就写下去了。
+-d|test.db|-e|SELECT * FROM t;
+!pages 1
+
+# 初始化了，但里面确实一张表都没有
+stdin:.tables\n
+
+# 在"已经有文件头、但还没有目录"的文件上建表
+-d|test.db|-e|CREATE TABLE t (x INT);
+-d|test.db|-e|INSERT INTO t VALUES (42);
+-d|test.db|-e|SELECT * FROM t;
+!pages 3

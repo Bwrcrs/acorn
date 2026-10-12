@@ -1,0 +1,30 @@
+# 空闲页链表存在的唯一理由：DROP 掉的空间，下一次建表要能捡回来。
+#
+# 这里断言的是"文件没有变大"。链表要是断了，页就永远漏在外面 ——
+# 程序不会报错，也不会崩，只会慢慢地、看不出来地把磁盘吃光。
+# 这种 bug 只能靠页数断言抓。
+
+-d|test.db|-e|CREATE TABLE a (x INT);
+!pages 3
+
+-d|test.db|-e|DROP TABLE a;
+
+# DROP 只是把页挂回空闲链，文件不会缩小 ——
+# 把文件截短是另一件事，还没做（见 README 的"已知限制"）
+!pages 3
+
+# 这一次应该捡回上面释放的那一页，所以还是 3 页
+-d|test.db|-e|CREATE TABLE b (y TEXT);
+!pages 3
+
+# 没有可捡的了，这次才真的长一页
+-d|test.db|-e|CREATE TABLE c (z TEXT);
+!pages 4
+
+# 复用回来的页必须真的能用，不是记了个数
+-d|test.db|-e|INSERT INTO b VALUES ('还在');
+-d|test.db|-e|INSERT INTO c VALUES ('也在');
+-d|test.db|-e|SELECT * FROM b;
+-d|test.db|-e|SELECT * FROM c;
+stdin:.tables\n
+!pages 4

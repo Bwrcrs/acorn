@@ -1,0 +1,3 @@
+--ast
+-e
+DELETE FROM users WHERE score IS NULL;

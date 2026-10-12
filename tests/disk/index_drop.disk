@@ -1,0 +1,84 @@
+# 阶段 4：DROP INDEX / DROP TABLE 和它们背后的页回收。
+#
+# 【这里的核心不变式】一条索引的目录记录和它的 B+ 树必须同生共死。
+# 少了任何一半，打开的库要么有一棵没人认领的树（页永远收不回来），
+# 要么有一条记录指着一棵已经不存在的树（打开就报错，或者更糟）。
+# 所以每删一次都要**重开进程**看一眼目录。
+
+-d|test.db|-e|CREATE TABLE t (id INT, v TEXT);
+-d|test.db|-e|INSERT INTO t VALUES (1,'a'),(2,'b'),(3,'c');
+-d|test.db|-e|CREATE INDEX t_id ON t (id);
+-d|test.db|-e|SELECT id FROM t WHERE id = 2;
+
+# 索引确实在
+stdin:.indexes\n
+
+# 到这一刻的 5 页：文件头、表目录、t 的堆、t_id 的树、索引目录。
+# 最后那一页是**第一次建索引时**才出现的：索引目录是第二条链，
+# 它得有自己的第一页（见 database.hpp 里关于两条链的说明）。
+#
+# 删掉索引之后这个数**不该变小**——文件从不缩小（和删行、删表
+# 一个道理），它只会在"页被重新用起来"的时候停止增长。
+# 下面那句 !pages 就是拿来和这一句比的。
+!pages 5
+
+# 删掉索引。树占的页还给空闲链，下一个要页的人就能拿去用 ——
+# 文件本身不会缩小（和删行、删表是同一个道理，见 drop_free_reuse.disk）。
+-d|test.db|-e|DROP INDEX t_id;
+
+# 页数没变：还回去的那一页进了空闲链，等着下一个人来拿
+!pages 5
+
+# 索引没了，但查询必须照样对：退回全表扫，答案一个字不变
+stdin:.indexes\n
+-d|test.db|-e|SELECT id FROM t WHERE id = 2;
+-d|test.db|-e|SELECT COUNT(*) FROM t WHERE id >= 1;
+
+# 同一个名字可以再建（旧的记录标了已删，名字腾出来了）
+-d|test.db|-e|CREATE INDEX t_id ON t (id);
+-d|test.db|-e|SELECT id FROM t WHERE id = 2;
+
+# 删一个不存在的索引
+-d|test.db|-e|DROP INDEX nope;
+
+# 【DROP TABLE 必须连带删掉这张表上的所有索引】
+# 不连带的话，索引里存的行号指向的是已经还给空闲链的页 ——
+# 那些页随时会被别的表拿去用，索引就成了指向别人数据的指针。
+-d|test.db|-e|CREATE TABLE keep (x INT);
+-d|test.db|-e|CREATE INDEX keep_x ON keep (x);
+-d|test.db|-e|DROP TABLE t;
+stdin:.tables\n
+stdin:.indexes\n
+
+# 另一张表的索引不能被误伤
+-d|test.db|-e|INSERT INTO keep VALUES (7);
+-d|test.db|-e|SELECT x FROM keep WHERE x = 7;
+-d|test.db|-e|SELECT * FROM t;
+
+# 表名和索引名都腾出来了，可以重新用。
+# （重新建的这张表会拿到刚才还回去的那些页 —— 索引要是指错了地方，
+#   下面这几条查询就会读到旧数据，而且不报错。）
+-d|test.db|-e|CREATE TABLE t (id INT, v TEXT);
+-d|test.db|-e|CREATE INDEX t_id ON t (id);
+-d|test.db|-e|INSERT INTO t VALUES (42,'z');
+-d|test.db|-e|SELECT v FROM t WHERE id = 42;
+-d|test.db|-e|SELECT COUNT(*) FROM t;
+stdin:.schema\n
+
+# 【页真的被重新用起来了】5 页变 7 页，而且**只多了 2 页**：
+# 中间一共还回去 2 页（DROP INDEX 还了 t_id 的树，DROP TABLE 还了 t 的堆），
+# 后面又新要了 4 页（keep 的堆、keep_x 的树、重建的 t 的堆、t_id 的树）。
+# 4 - 2 = 2，所以只涨了 2 页。
+#
+# 要是 DROP 只把目录记录标了已删、没把页还给空闲链，这里就会涨 4 页 ——
+# 一次看不见的泄漏，反复建删就能把文件撑到很大。
+!pages 7
+
+# 全部重开一次：两条目录链都得是干净的
+-d|test.db|-e|SELECT COUNT(*) FROM t WHERE id = 42;
+-d|test.db|-e|SELECT COUNT(*) FROM keep WHERE x = 7;
+stdin:.tables\n.indexes\n.info\n
+
+# 重开一遍之后还是 7 页：重新打开不会凭空分配页，
+# 也不会把哪一页看丢（看丢的话，下一次分配会覆盖别人的数据）。
+!pages 7

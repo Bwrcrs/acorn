@@ -1,0 +1,3 @@
+--ast
+-e
+SELECT name, score * 2 + 1 FROM users WHERE score IS NOT NULL ORDER BY score DESC, name LIMIT 3 OFFSET 1;

@@ -1,0 +1,43 @@
+$ -d test.db -e "CREATE TABLE big (id INT, tag TEXT);"
+已创建表 `big`（2 列）
+! bulk big: 1000 rows x 300 byte text -> bulk.sql
+$ -d test.db bulk.sql
+插入了 1000 行
+! pages 86  ->  file is 352256 bytes = 86 pages
+$ -d test.db -e "SELECT COUNT(*), SUM(id), MIN(id), MAX(id) FROM big;"
++-----------+----------+----------+----------+
+| (count *) | (sum id) | (min id) | (max id) |
++-----------+----------+----------+----------+
+| 1000      | 500500   | 1        | 1000     |
++-----------+----------+----------+----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM big WHERE tag = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';"
++-----------+
+| (count *) |
++-----------+
+| 1000      |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT id FROM big WHERE id = 1 OR id = 500 OR id = 1000;"
++------+
+| id   |
++------+
+| 1    |
+| 500  |
+| 1000 |
++------+
+(3 行)
+$ -d test.db -e "SELECT COUNT(*), SUM(id) FROM big;"
++-----------+----------+
+| (count *) | (sum id) |
++-----------+----------+
+| 1000      | 500500   |
++-----------+----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM big WHERE tag = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';"
++-----------+
+| (count *) |
++-----------+
+| 1000      |
++-----------+
+(1 行)

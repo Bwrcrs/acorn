@@ -1,0 +1,155 @@
+$ -d test.db -e "CREATE TABLE d (id INT, v TEXT);"
+已创建表 `d`（2 列）
+$ -d test.db -e "CREATE TABLE d2 (id INT, v TEXT);"
+已创建表 `d2`（2 列）
+! bulk d: 400 rows x 20 byte text -> bulk.sql
+$ -d test.db bulk.sql
+插入了 400 行
+! bulk d2: 400 rows x 20 byte text -> bulk.sql
+$ -d test.db bulk.sql
+插入了 400 行
+$ -d test.db -e "CREATE INDEX d_id ON d (id);"
+已在表 `d` 的列 `id` 上建好索引 `d_id`
+$ -d test.db -e "CREATE INDEX d_v ON d (v);"
+已在表 `d` 的列 `v` 上建好索引 `d_v`
+$ -d test.db -e "SELECT id FROM d WHERE id = 200;"
++-----+
+| id  |
++-----+
+| 200 |
++-----+
+(1 行)
+$ -d test.db -e "SELECT id FROM d2 WHERE id = 200;"
++-----+
+| id  |
++-----+
+| 200 |
++-----+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE id > 350;"
++-----------+
+| (count *) |
++-----------+
+| 50        |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d2 WHERE id > 350;"
++-----------+
+| (count *) |
++-----------+
+| 50        |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE v = 'xxxxxxxxxxxxxxxxxxxx';"
++-----------+
+| (count *) |
++-----------+
+| 400       |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d2 WHERE v = 'xxxxxxxxxxxxxxxxxxxx';"
++-----------+
+| (count *) |
++-----------+
+| 400       |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT id FROM d WHERE v = 'xxxxxxxxxxxxxxxxxxxx' ORDER BY id LIMIT 3;"
++----+
+| id |
++----+
+| 1  |
+| 2  |
+| 3  |
++----+
+(3 行)
+$ -d test.db -e "SELECT id, v FROM d WHERE id = 399;"
++-----+----------------------+
+| id  | v                    |
++-----+----------------------+
+| 399 | xxxxxxxxxxxxxxxxxxxx |
++-----+----------------------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE id >= 1 AND id <= 400;"
++-----------+
+| (count *) |
++-----------+
+| 400       |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE id < 1;"
++-----------+
+| (count *) |
++-----------+
+| 0         |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE id > 400;"
++-----------+
+| (count *) |
++-----------+
+| 0         |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE id >= 400;"
++-----------+
+| (count *) |
++-----------+
+| 1         |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE id > 390 AND v <> 'nope';"
++-----------+
+| (count *) |
++-----------+
+| 10        |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE id > 390 AND v = 'xxxxxxxxxxxxxxxxxxxx';"
++-----------+
+| (count *) |
++-----------+
+| 10        |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*), SUM(id), MIN(id), MAX(id) FROM d WHERE id >= 100;"
++-----------+----------+----------+----------+
+| (count *) | (sum id) | (min id) | (max id) |
++-----------+----------+----------+----------+
+| 301       | 75250    | 100      | 400      |
++-----------+----------+----------+----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*), SUM(id) FROM d2 WHERE id >= 100;"
++-----------+----------+
+| (count *) | (sum id) |
++-----------+----------+
+| 301       | 75250    |
++-----------+----------+
+(1 行)
+$ -d test.db -e "SELECT COUNT(*) FROM d WHERE v = 'xxxxxxxxxxxxxxxxxxxx';"
++-----------+
+| (count *) |
++-----------+
+| 400       |
++-----------+
+(1 行)
+$ -d test.db -e "SELECT id FROM d WHERE id = 1;"
++----+
+| id |
++----+
+| 1  |
++----+
+(1 行)
+$ acorn -d test.db      # stdin: .indexes\n
+CREATE INDEX d_id ON d (id);
+CREATE INDEX d_v ON d (v);
+$ acorn -d test.db      # stdin: .schema d\n
+CREATE TABLE d (id INT, v TEXT);
+CREATE INDEX d_id ON d (id);
+CREATE INDEX d_v ON d (v);
+$ acorn -d test.db      # stdin: .info\n
+库的位置：test.db
+表：2 张，索引：2 个
+缓存 3/64 格在用，其中 0 页待写回、0 页被借出；文件共 22 页
+锁：共享（只能读；别的读者也能同时进来，但谁都写不了）
+! pages 22  ->  file is 90112 bytes = 22 pages

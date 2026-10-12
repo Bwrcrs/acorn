@@ -1,0 +1,1 @@
+(select ((count *) (sum score) (avg score) (min name)) from users)

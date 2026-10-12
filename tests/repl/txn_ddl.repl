@@ -1,0 +1,63 @@
+-- 阶段 5：DDL 也要能回滚（建表、建索引、删表都在一个事务里）。
+--
+-- 【为什么这条值得单独测】因为 DDL 改的东西比 DML 多：
+-- 它改的是**目录**（"有哪些表、有哪些索引"那份账本）。
+-- 页退回去了，内存里那份账本也必须跟着重新读一遍——
+-- 不然数据库会以为自己有一张磁盘上并不存在的表，
+-- 接下来每次查询都会读到"没有数据页的表"。
+-- 那就是 Database::rollback 里"重新读目录"那一步存在的理由，
+-- 这个用例就是它的证据。
+--
+-- 【为什么是 .repl】因为下面那句 `SELECT * FROM gone;` 是**故意**
+-- 让它报错的（表就该不存在）。跑脚本文件时这一错就中断整个文件，
+-- 后面"删表回滚""删索引回滚"全都来不及跑。
+
+CREATE TABLE keep (id INT, v TEXT);
+INSERT INTO keep VALUES (1, 'kept');
+
+-- ---- 建表 + 建索引 + 插数据，然后整个回滚 ----
+BEGIN;
+CREATE TABLE gone (x INT, y TEXT);
+CREATE INDEX gone_x ON gone (x);
+INSERT INTO gone VALUES (1, 'a'), (2, 'b');
+SELECT COUNT(*) FROM gone;
+ROLLBACK;
+
+-- 表该彻底不存在（不是"在但是空的"）：
+-- 这句报错就是证明，而且它顺带把"现在有哪几张表"打了出来
+SELECT * FROM gone;
+SELECT COUNT(*) FROM keep;
+
+-- ---- 删表也能回滚 ----
+BEGIN;
+DROP TABLE keep;
+ROLLBACK;
+SELECT * FROM keep ORDER BY id;
+
+-- ---- 删索引也能回滚 ----
+--
+-- 证明方式是下面那句 .indexes：索引要是退回来了，
+-- 它会印出一行可以直接粘回去的 CREATE INDEX。
+--
+-- 【注意 .indexes 前面不能有"光秃秃的注释行"】
+-- REPL 判断"该不该当点命令"看的是"手上有没有正在攒的语句"，
+-- 而注释行会被算进正在攒的语句里——于是 .indexes 会被当成
+-- SQL 拼到后面，报一句"读到的是 `.`"。
+-- （这就是 semicolon_in_string.repl 那个坑的另一面。）
+BEGIN;
+CREATE INDEX keep_id ON keep (id);
+COMMIT;
+BEGIN;
+DROP INDEX keep_id;
+ROLLBACK;
+.indexes
+SELECT id FROM keep WHERE id = 1;
+
+-- ---- 提交的 DDL 当然要留下 ----
+BEGIN;
+CREATE TABLE stays (n INT);
+INSERT INTO stays VALUES (7);
+COMMIT;
+SELECT * FROM stays;
+
+.quit

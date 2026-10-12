@@ -1,0 +1,24 @@
+# 删表相关的错误路径。
+#
+# 这些错误都不能把库弄坏：报完错，别的表还得能用。
+
+-d|test.db|-e|CREATE TABLE t (x INT);
+-d|test.db|-e|INSERT INTO t VALUES (1);
+
+# 没有这张表
+-d|test.db|-e|DROP TABLE nope;
+
+# DROP 后面既不是 TABLE 也不是 INDEX
+-d|test.db|-e|DROP VIEW x;
+
+# DROP INDEX 语法对了，但没有这个索引
+-d|test.db|-e|DROP INDEX nope;
+
+# 报错之后库还是好好的
+-d|test.db|-e|SELECT * FROM t;
+
+# 真删掉，再查就查不到了
+-d|test.db|-e|DROP TABLE t;
+-d|test.db|-e|SELECT * FROM t;
+stdin:.tables\n
+!pages 3

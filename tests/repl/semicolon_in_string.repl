@@ -1,0 +1,27 @@
+-- 字符串字面量里的分号不是语句结束符。
+--
+-- 这个文件是 REPL 分号判断的回归测试。改成"看最后一个 Token"之前，
+-- 下面第一句会在 'a;b' 中间那个分号处被判定为"写完了"，
+-- 然后报一句莫名其妙的"字符串没有收尾的单引号"。
+CREATE TABLE t (id INT, s TEXT);
+INSERT INTO t VALUES (1, 'a;b');
+INSERT INTO t VALUES (2, 'x;y;z');
+-- 连写两个单引号表示一个真的单引号，里面再塞分号
+INSERT INTO t VALUES (3, 'it''s;ok');
+SELECT * FROM t;
+
+-- 跨行的字符串也要能攒齐（一路攒到收尾的单引号为止）
+INSERT INTO t VALUES (4, 'multi
+line;value');
+SELECT id, s FROM t WHERE id = 4;
+
+-- 跨行的块注释
+/* 这里面
+   有个分号 ; 但它不算
+   语句结束 */
+SELECT COUNT(*) AS 行数 FROM t;
+
+-- 一个真的写错的字符（孤立的 !）：应该**立刻**报出来，
+-- 而不是傻等着用户继续敲。报完之后缓冲清空，后面还能正常用。
+SELECT ! FROM t;
+SELECT COUNT(*) FROM t;

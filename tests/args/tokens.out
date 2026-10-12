@@ -1,0 +1,13 @@
+<SELECT>  @ 1:1
+<STAR>  @ 1:8
+<FROM>  @ 1:10
+<IDENTIFIER t>  @ 1:15
+<WHERE>  @ 1:17
+<IDENTIFIER a>  @ 1:23
+<NOT_EQUAL>  @ 1:25
+<INTEGER 1>  @ 1:28
+<AND>  @ 1:30
+<IDENTIFIER b>  @ 1:34
+<NOT_EQUAL>  @ 1:36
+<INTEGER 2>  @ 1:39
+<SEMICOLON>  @ 1:40
